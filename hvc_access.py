@@ -4,7 +4,6 @@ from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="HVC Access", layout="centered")
 
-# UI Styling for HHD Displays
 st.markdown("""
     <style>
     .stTextInput input { font-size: 26px !important; text-align: center; }
@@ -18,22 +17,26 @@ st.markdown("""
 
 st.title("HVC Access Verification")
 
-# Load Credentials cleanly from Secrets
 @st.cache_resource
 def get_sheet():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     
-    # Convert st.secrets proxy to a dict and normalize private key formatting
+    # 1. Load secrets dict
     secret_dict = dict(st.secrets["gcp_service_account"])
-    secret_dict["private_key"] = secret_dict["private_key"].replace("\\n", "\n")
     
+    # 2. Fix key formatting regardless of how Streamlit escaped it
+    raw_key = secret_dict["private_key"]
+    if "\\n" in raw_key:
+        raw_key = raw_key.replace("\\n", "\n")
+    secret_dict["private_key"] = raw_key
+    
+    # 3. Authenticate
     creds = Credentials.from_service_account_info(secret_dict, scopes=scopes)
     client = gspread.authorize(creds)
     return client.open("HVC_Access_Database").sheet1
 
 sheet = get_sheet()
 
-# Barcode / ID Input
 worker_id = st.text_input("Scan or Enter Worker ID:", key="worker_id", autofocus=True)
 
 if worker_id:
