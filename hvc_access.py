@@ -1,4 +1,3 @@
-import os
 import gspread
 import streamlit as st
 from google.oauth2.service_account import Credentials
@@ -19,14 +18,15 @@ st.markdown("""
 
 st.title("HVC Access Verification")
 
-# Load Credentials using modern google-auth
+# Authenticate via Streamlit Secrets
 @st.cache_resource
 def get_sheet():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    json_path = os.path.join(base_dir, "credentials.json")
     
-    creds = Credentials.from_service_account_file(json_path, scopes=scopes)
+    # Loads directly from Streamlit Secrets tab
+    creds_dict = dict(st.secrets["gcp_service_account"])
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    
     client = gspread.authorize(creds)
     return client.open("HVC_Access_Database").sheet1
 
