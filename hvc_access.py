@@ -23,7 +23,7 @@ st.title("HVC Access Verification")
 def get_sheet():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     
-    # Loads directly from Streamlit Secrets tab
+    # Read secrets directly from Streamlit Cloud Secrets box
     creds_dict = dict(st.secrets["gcp_service_account"])
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     
