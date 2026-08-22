@@ -23,9 +23,9 @@ st.title("HVC Access Verification")
 def get_sheet():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     
-    # Write the raw JSON string directly into a temporary file
-    # This lets Google Auth's native file loader handle the key parsing natively
+    # Clean the JSON string so double-escaped newlines become real line breaks
     json_data = st.secrets["gcp_service_account"]["json_data"]
+    json_data = json_data.replace("\\\\n", "\n").replace("\\n", "\n")
     
     with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as temp_file:
         temp_file.write(json_data)
