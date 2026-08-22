@@ -23,10 +23,11 @@ st.title("HVC Access Verification")
 def get_sheet():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     
-    # Read secrets directly from Streamlit Cloud Secrets box
+    # Load secrets and clean up private key formatting
     creds_dict = dict(st.secrets["gcp_service_account"])
-    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
     
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     client = gspread.authorize(creds)
     return client.open("HVC_Access_Database").sheet1
 
