@@ -1,5 +1,4 @@
-import os
-import tempfile
+import json
 import gspread
 import streamlit as st
 from google.oauth2.service_account import Credentials
@@ -23,23 +22,16 @@ st.title("HVC Access Verification")
 def get_sheet():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     
-    # Clean the JSON string so double-escaped newlines become real line breaks
-    json_data = st.secrets["gcp_service_account"]["json_data"]
-    json_data = json_data.replace("\\\\n", "\n").replace("\\n", "\n")
+    # 1. Load the raw JSON string from secrets
+    raw_json_str = st.secrets["gcp_service_account"]["json_data"]
     
-    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as temp_file:
-        temp_file.write(json_data)
-        temp_file_path = temp_file.name
-
-    try:
-        creds = Credentials.from_service_account_file(temp_file_path, scopes=scopes)
-        client = gspread.authorize(creds)
-        sheet = client.open("HVC_Access_Database").sheet1
-    finally:
-        if os.path.exists(temp_file_path):
-            os.remove(temp_file_path)
-            
-    return sheet
+    # 2. Parse into a Python dictionary cleanly
+    service_account_info = json.loads(raw_json_str, strict=False)
+    
+    # 3. Authenticate directly from the dictionary
+    creds = Credentials.from_service_account_info(service_account_info, scopes=scopes)
+    client = gspread.authorize(creds)
+    return client.open("HVC_Access_Database").sheet1
 
 sheet = get_sheet()
 
