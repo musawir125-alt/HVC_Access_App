@@ -16,9 +16,8 @@ st.markdown("""
 
 st.title("HVC Access Verification")
 
-# Directly fetch spreadsheet as CSV without any Google Cloud authentication keys
-# Replace the SHEET_ID string below with your actual Google Sheet ID
-SHEET_ID = "YOUR_GOOGLE_SHEET_ID_HERE"
+# Your specific Google Sheet ID
+SHEET_ID = "1O1E8tXNmO9dj82Ug6_KXYidVt9E19UXTMn9OWgt2eRY"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
 @st.cache_data(ttl=5)
