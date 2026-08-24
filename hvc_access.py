@@ -1,6 +1,5 @@
-import gspread
+import pandas as pd
 import streamlit as st
-from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="HVC Access", layout="centered")
 
@@ -17,34 +16,30 @@ st.markdown("""
 
 st.title("HVC Access Verification")
 
-@st.cache_resource
-def get_sheet():
-    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    
-    # 1. Access the secrets dictionary
-    creds_dict = dict(st.secrets["gcp_service_account"])
-    
-    # 2. Re-format the private key line breaks
-    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-    
-    # 3. Create credentials
-    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-    client = gspread.authorize(creds)
-    return client.open("HVC_Access_Database").sheet1
+# Directly fetch spreadsheet as CSV without any Google Cloud authentication keys
+# Replace the SHEET_ID string below with your actual Google Sheet ID
+SHEET_ID = "YOUR_GOOGLE_SHEET_ID_HERE"
+CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
-sheet = get_sheet()
+@st.cache_data(ttl=5)
+def load_data():
+    return pd.read_csv(CSV_URL)
 
 worker_id = st.text_input("Scan or Enter Worker ID:", key="worker_id", autofocus=True)
 
 if worker_id:
     with st.spinner("Verifying..."):
         try:
-            cell = sheet.find(worker_id.strip())
-            if cell:
-                row = sheet.row_values(cell.row)
-                name = row[1] if len(row) > 1 else "Unknown"
-                status = row[2] if len(row) > 2 else "DENIED"
-                photo_url = row[3] if len(row) > 3 else ""
+            df = load_data()
+            
+            # Match Worker ID in Column A
+            match = df[df.iloc[:, 0].astype(str).str.strip() == worker_id.strip()]
+            
+            if not match.empty:
+                row = match.iloc[0]
+                name = str(row.iloc[1]) if len(row) > 1 else "Unknown"
+                status = str(row.iloc[2]) if len(row) > 2 else "DENIED"
+                photo_url = str(row.iloc[3]) if len(row) > 3 else ""
 
                 if status.upper() in ["ACTIVE", "APPROVED", "GRANTED"]:
                     st.markdown(f'<div class="status-box granted">ACCESS GRANTED<br><small>{name}</small></div>', unsafe_allow_html=True)
@@ -58,4 +53,4 @@ if worker_id:
             else:
                 st.markdown('<div class="status-box denied">ACCESS DENIED<br><small>ID Not Found</small></div>', unsafe_allow_html=True)
         except Exception as e:
-            st.error(f"Error checking sheet: {e}")
+            st.error(f"Error reading database: {e}")
