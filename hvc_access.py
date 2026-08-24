@@ -1,7 +1,8 @@
-import pandas as pd
-import requests
-import io
+import base64
+import json
+import gspread
 import streamlit as st
+from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="HVC Access", layout="centered")
 
@@ -18,34 +19,36 @@ st.markdown("""
 
 st.title("HVC Access Verification")
 
-CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMh-mUpoRQAw7o_QvveIu8zrTivZ74ufxS3G5syrAumzwaEEybE82i5n6-DhC5TZvsZ1bA_SH4poW2/pub?output=csv"
+@st.cache_resource
+def get_sheet():
+    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    
+    # Decode base64 secret string
+    base64_str = st.secrets["GCP_JSON_BASE64"]
+    json_bytes = base64.b64decode(base64_str)
+    service_account_info = json.loads(json_bytes.decode("utf-8"))
+    
+    # Normalize escaped newlines in private key
+    if "private_key" in service_account_info:
+        service_account_info["private_key"] = service_account_info["private_key"].replace("\\n", "\n")
+    
+    creds = Credentials.from_service_account_info(service_account_info, scopes=scopes)
+    client = gspread.authorize(creds)
+    return client.open("HVC_Access_Database").sheet1
 
-@st.cache_data(ttl=5)
-def load_data():
-    session = requests.Session()
-    session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    })
-    response = session.get(CSV_URL, allow_redirects=True)
-    if response.status_code != 200:
-        raise Exception(f"Failed to fetch data (HTTP {response.status_code})")
-    return pd.read_csv(io.StringIO(response.text))
+sheet = get_sheet()
 
 worker_id = st.text_input("Scan or Enter Worker ID:", key="worker_id")
 
 if worker_id:
     with st.spinner("Verifying..."):
         try:
-            df = load_data()
-            
-            # Match Worker ID in Column A
-            match = df[df.iloc[:, 0].astype(str).str.strip() == worker_id.strip()]
-            
-            if not match.empty:
-                row = match.iloc[0]
-                name = str(row.iloc[1]) if len(row) > 1 else "Unknown"
-                status = str(row.iloc[2]) if len(row) > 2 else "DENIED"
-                photo_url = str(row.iloc[3]) if len(row) > 3 else ""
+            cell = sheet.find(worker_id.strip())
+            if cell:
+                row = sheet.row_values(cell.row)
+                name = row[1] if len(row) > 1 else "Unknown"
+                status = row[2] if len(row) > 2 else "DENIED"
+                photo_url = row[3] if len(row) > 3 else ""
 
                 if status.upper() in ["ACTIVE", "APPROVED", "GRANTED"]:
                     st.markdown(f'<div class="status-box granted">ACCESS GRANTED<br><small>{name}</small></div>', unsafe_allow_html=True)
@@ -59,4 +62,4 @@ if worker_id:
             else:
                 st.markdown('<div class="status-box denied">ACCESS DENIED<br><small>ID Not Found</small></div>', unsafe_allow_html=True)
         except Exception as e:
-            st.error(f"Error reading database: {e}")
+            st.error(f"Error checking sheet: {e}")
