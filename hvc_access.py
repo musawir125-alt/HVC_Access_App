@@ -16,7 +16,6 @@ st.markdown("""
 
 st.title("HVC Access Verification")
 
-# Your specific Google Sheet ID
 SHEET_ID = "1O1E8tXNmO9dj82Ug6_KXYidVt9E19UXTMn9OWgt2eRY"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
@@ -24,7 +23,8 @@ CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 def load_data():
     return pd.read_csv(CSV_URL)
 
-worker_id = st.text_input("Scan or Enter Worker ID:", key="worker_id", autofocus=True)
+# Fixed: Removed 'autofocus=True'
+worker_id = st.text_input("Scan or Enter Worker ID:", key="worker_id")
 
 if worker_id:
     with st.spinner("Verifying..."):
