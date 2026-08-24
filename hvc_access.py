@@ -16,12 +16,13 @@ st.markdown("""
 
 st.title("HVC Access Verification")
 
-# Your exact published Google Sheet CSV URL
+# Your published Google Sheet link
 CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMh-mUpoRQAw7o_QvveIu8zrTivZ74ufxS3G5syrAumzwaEEybE82i5n6-DhC5TZvsZ1bA_SH4poW2/pub?output=csv"
 
 @st.cache_data(ttl=5)
 def load_data():
-    return pd.read_csv(CSV_URL)
+    # Adding storage_options avoids Google 401 request blocks
+    return pd.read_csv(CSV_URL, storage_options={'User-Agent': 'Mozilla/5.0'})
 
 worker_id = st.text_input("Scan or Enter Worker ID:", key="worker_id")
 
