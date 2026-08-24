@@ -16,14 +16,13 @@ st.markdown("""
 
 st.title("HVC Access Verification")
 
-SHEET_ID = "1O1E8tXNmO9dj82Ug6_KXYidVt9E19UXTMn9OWgt2eRY"
-CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
+# Your exact published Google Sheet CSV URL
+CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSMh-mUpoRQAw7o_QvveIu8zrTivZ74ufxS3G5syrAumzwaEEybE82i5n6-DhC5TZvsZ1bA_SH4poW2/pub?output=csv"
 
 @st.cache_data(ttl=5)
 def load_data():
     return pd.read_csv(CSV_URL)
 
-# Fixed: Removed 'autofocus=True'
 worker_id = st.text_input("Scan or Enter Worker ID:", key="worker_id")
 
 if worker_id:
