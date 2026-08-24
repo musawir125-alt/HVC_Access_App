@@ -1,8 +1,5 @@
-import base64
-import json
-import gspread
 import streamlit as st
-from google.oauth2.service_account import Credentials
+from streamlit_gsheets import GSheetsConnection
 
 st.set_page_config(page_title="HVC Access", layout="centered")
 
@@ -19,36 +16,28 @@ st.markdown("""
 
 st.title("HVC Access Verification")
 
-@st.cache_resource
-def get_sheet():
-    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    
-    # Decode base64 secret string
-    base64_str = st.secrets["GCP_JSON_BASE64"]
-    json_bytes = base64.b64decode(base64_str)
-    service_account_info = json.loads(json_bytes.decode("utf-8"))
-    
-    # Normalize escaped newlines in private key
-    if "private_key" in service_account_info:
-        service_account_info["private_key"] = service_account_info["private_key"].replace("\\n", "\n")
-    
-    creds = Credentials.from_service_account_info(service_account_info, scopes=scopes)
-    client = gspread.authorize(creds)
-    return client.open("HVC_Access_Database").sheet1
+# Connect using Streamlit's native GSheets engine
+conn = st.connection("gsheets", type=GSheetsConnection)
 
-sheet = get_sheet()
+@st.cache_data(ttl=5)
+def load_data():
+    return conn.read(spreadsheet="HVC_Access_Database", ttl="5s")
 
 worker_id = st.text_input("Scan or Enter Worker ID:", key="worker_id")
 
 if worker_id:
     with st.spinner("Verifying..."):
         try:
-            cell = sheet.find(worker_id.strip())
-            if cell:
-                row = sheet.row_values(cell.row)
-                name = row[1] if len(row) > 1 else "Unknown"
-                status = row[2] if len(row) > 2 else "DENIED"
-                photo_url = row[3] if len(row) > 3 else ""
+            df = load_data()
+            
+            # Match Worker ID in Column A
+            match = df[df.iloc[:, 0].astype(str).str.strip() == worker_id.strip()]
+            
+            if not match.empty:
+                row = match.iloc[0]
+                name = str(row.iloc[1]) if len(row) > 1 else "Unknown"
+                status = str(row.iloc[2]) if len(row) > 2 else "DENIED"
+                photo_url = str(row.iloc[3]) if len(row) > 3 else ""
 
                 if status.upper() in ["ACTIVE", "APPROVED", "GRANTED"]:
                     st.markdown(f'<div class="status-box granted">ACCESS GRANTED<br><small>{name}</small></div>', unsafe_allow_html=True)
